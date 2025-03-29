@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useWallet } from "@crossmint/client-sdk-react-ui";
 import { PopupWindow } from "@crossmint/client-sdk-window";
+import { ChevronDown } from "lucide-react";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardFooter,
@@ -19,10 +18,11 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Label } from "../ui/label";
-import { ChevronDown } from "lucide-react";
+import { AuthenticatedCard } from "../ui/crossmint/auth-card";
+import { useCrossmint } from "../providers/crossmint";
 
 export function FundWallet() {
-  const { wallet } = useWallet();
+  const { wallet } = useCrossmint();
   const [token, setToken] = useState<"sol" | "usdc" | null>(null);
 
   async function handleOnFund() {
@@ -44,7 +44,7 @@ export function FundWallet() {
   }
 
   return (
-    <Card>
+    <AuthenticatedCard>
       <CardHeader>
         <CardTitle>Fund wallet with test tokens</CardTitle>
         <CardDescription className="flex items-center gap-2">
@@ -71,12 +71,12 @@ export function FundWallet() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <CardFooter className="p-0 flex mt-4 w-full">
+          <Button className="w-full" onClick={handleOnFund}>
+            Fund wallet
+          </Button>
+        </CardFooter>
       </CardContent>
-      <CardFooter className="flex">
-        <Button className="w-full" onClick={handleOnFund}>
-          Fund wallet
-        </Button>
-      </CardFooter>
-    </Card>
+    </AuthenticatedCard>
   );
 }

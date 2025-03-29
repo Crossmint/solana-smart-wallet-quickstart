@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useWallet } from "@crossmint/client-sdk-react-ui";
 import {
   Card,
   CardContent,
@@ -21,49 +20,50 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { ChevronDown } from "lucide-react";
 import { createTokenTransferTransaction } from "@/lib/transaction/createTransaction";
+import { AuthenticatedCard } from "../ui/crossmint/auth-card";
+import { useCrossmint } from "../providers/crossmint";
 
 export function TransferFunds() {
-  const { wallet, type } = useWallet();
-  const [token, setToken] = useState<"sol" | "usdc" | null>(null);
+  const { wallet } = useCrossmint();
+  const [token, setToken] = useState<"usdc" | null>(null);
   const [recipient, setRecipient] = useState<string | null>(null);
   const [amount, setAmount] = useState<number | null>(null);
+  const [txnLink, setTxnLink] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleOnTransfer() {
     if (
       wallet == null ||
       token == null ||
-      type !== "solana-smart-wallet" ||
       recipient == null ||
       amount == null
     ) {
       return;
     }
-
+    setIsLoading(true);
     try {
-      const tokenMint =
-        token === "sol"
-          ? "not_supported_yet"
-          : "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
       const txn = await createTokenTransferTransaction(
         wallet.getAddress(),
         recipient,
-        tokenMint,
+        "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", // USDC on devnet
         amount
       );
       console.log({ txn });
 
-      const response = await wallet.sendTransaction({
-        transaction: txn,
-      });
+      // const signature = await wallet.sendTransaction({
+      //   transaction: txn,
+      // });
 
-      console.log({ response });
+      // setTxnLink(`https://solscan.io/tx/${signature}?cluster=devnet`);
     } catch (err) {
       console.error("Something went wrong", err);
+    } finally {
+      setIsLoading(false);
     }
   }
 
   return (
-    <Card>
+    <AuthenticatedCard>
       <CardHeader>
         <CardTitle>Transfer funds</CardTitle>
         <CardDescription className="flex items-center gap-2">
@@ -92,9 +92,6 @@ export function TransferFunds() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setToken("sol")}>
-                    Solana
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setToken("usdc")}>
                     USDC
                   </DropdownMenuItem>
@@ -111,12 +108,23 @@ export function TransferFunds() {
             </div>
           </div>
         </div>
+        <CardFooter className="p-0 flex flex-col gap-2 mt-3 w-full">
+          {txnLink && (
+            <span className="text-sm text-gray-500">
+              <a href={txnLink} target="_blank" rel="noopener noreferrer">
+                View on Solscan
+              </a>
+            </span>
+          )}
+          <Button
+            className="w-full"
+            onClick={handleOnTransfer}
+            disabled={isLoading}
+          >
+            {isLoading ? "Transferring..." : "Transfer"}
+          </Button>
+        </CardFooter>
       </CardContent>
-      <CardFooter className="flex">
-        <Button className="w-full" onClick={handleOnTransfer}>
-          Transfer
-        </Button>
-      </CardFooter>
-    </Card>
+    </AuthenticatedCard>
   );
 }

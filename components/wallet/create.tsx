@@ -1,8 +1,6 @@
 "use client";
 
-import * as React from "react";
 import Image from "next/image";
-import { useAuth, useWallet } from "@crossmint/client-sdk-react-ui";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,39 +12,114 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Copy } from "lucide-react";
+import { useCrossmint } from "../providers/crossmint";
+import { PhantomProvider, usePhantom } from "../providers/phantom";
 
 export function CreateWallet() {
-  const { logout, login } = useAuth();
-  const { wallet } = useWallet();
+  const {
+    connect: connectPhantom,
+    disconnect: disconnectPhantom,
+    connected: phantomConnected,
+    publicKey: phantomPublicKey,
+    isInstalled: isPhantomInstalled,
+    connecting: phantomConnecting,
+    provider: phantomProvider,
+  } = usePhantom();
+  const {
+    getOrCreateWallet,
+    wallet,
+    loading: crossmintLoading,
+  } = useCrossmint();
+  const isLoading = phantomConnecting || crossmintLoading;
+
+  const handleOnPhantomConnect = async () => {
+    try {
+      if (phantomConnected) {
+        await disconnectPhantom();
+      }
+      let publicKey = phantomPublicKey || (await connectPhantom());
+      await getOrCreateWallet(
+        publicKey as string,
+        phantomProvider as PhantomProvider
+      );
+    } catch (err) {
+      console.error(
+        "Error connecting phantom wallet and creating solana smart wallet",
+        err
+      );
+    }
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Image src="/sol.svg" alt="Solana" width={24} height={24} />
           Create a wallet
         </CardTitle>
-        <CardDescription>Create a wallet to start using Solana</CardDescription>
+        <CardDescription>
+          Connected your Phantom wallet to start using Solana.
+        </CardDescription>
+        {!isPhantomInstalled && (
+          <div className="p-2 bg-yellow-100 border border-yellow-300 rounded-md text-xs">
+            <p className="font-semibold">
+              You don't have Phantom installed in your browser. Please install
+              it to continue.
+            </p>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
-        <div className="grid w-full items-center gap-4">
-          {wallet != null && (
-            <div>
-              <p className="text-sm text-muted-foreground">Address</p>
-              <div className="flex items-center gap-2 w-full">
-                <div className="flex-1 w-full break-all">
-                  {wallet?.getAddress()}
+        <div className="flex flex-col gap-2">
+          {phantomPublicKey != null && (
+            <div className="flex items-center gap-2 p-1.5 rounded-lg border">
+              <Image src="/phantom.svg" alt="Phantom" width={20} height={20} />
+              <div className="overflow-hidden flex-grow">
+                <div className="flex items-center">
+                  <p className="text-xs text-muted-foreground truncate">
+                    {phantomPublicKey}
+                  </p>
+                  <Button
+                    className="w-4 h-4"
+                    variant={"ghost"}
+                    onClick={() =>
+                      navigator.clipboard.writeText(phantomPublicKey)
+                    }
+                  >
+                    <Copy className="w-2 h-2" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(wallet?.getAddress() || "");
-                  }}
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
+              </div>
+            </div>
+          )}
+          {wallet != null && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 p-1.5 rounded-lg border">
+                <Image
+                  src="/crossmint.png"
+                  alt="Crossmint"
+                  width={20}
+                  height={20}
+                />
+                <div className="overflow-hidden flex-grow">
+                  <div className="flex items-center">
+                    <p className="text-xs text-muted-foreground truncate">
+                      {wallet.address}
+                    </p>
+                    <Button
+                      className="w-4 h-4"
+                      variant={"ghost"}
+                      onClick={() =>
+                        navigator.clipboard.writeText(wallet.address)
+                      }
+                    >
+                      <Copy className="w-2 h-2" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="p-2 bg-green-100 border border-green-300 rounded-md text-xs">
+                Crossmint wallet fetched successfully with your Phantom wallet
+                as admin signer.
               </div>
             </div>
           )}
@@ -56,9 +129,20 @@ export function CreateWallet() {
         <Button
           className="w-full"
           variant={"outline"}
-          onClick={wallet != null ? logout : login}
+          onClick={handleOnPhantomConnect}
         >
-          {wallet != null ? "Log out" : "Log in"}
+          <Image
+            src="/phantom.svg"
+            alt="Phantom"
+            width={24}
+            height={24}
+            className="rounded-sm"
+          />
+          {isLoading
+            ? "Connecting..."
+            : phantomConnected
+            ? "Disconnect"
+            : "Connect"}
         </Button>
       </CardFooter>
     </Card>

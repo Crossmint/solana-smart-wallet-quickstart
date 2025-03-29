@@ -14,7 +14,6 @@ import {
 
 const connection = new Connection("https://api.devnet.solana.com", "confirmed");
 
-/* TODO: Soon to be replaced by the Crossmint SDK */
 export async function createTokenTransferTransaction(
   from: string,
   to: string,
@@ -29,11 +28,13 @@ export async function createTokenTransferTransaction(
   // Get associated token accounts for both addresses
   const senderTokenAccount = await getAssociatedTokenAddress(
     tokenMintPublicKey,
-    fromPublicKey
+    fromPublicKey,
+    true
   );
   const recipientTokenAccount = await getAssociatedTokenAddress(
     tokenMintPublicKey,
-    toPublicKey
+    toPublicKey,
+    true
   );
   console.log("Sender token account:", senderTokenAccount);
   console.log("Recipient token account:", recipientTokenAccount);

@@ -1,44 +1,40 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useAuth, useWallet } from "@crossmint/client-sdk-react-ui";
-
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useCrossmint } from "../providers/crossmint";
+import { AuthenticatedCard } from "../ui/crossmint/auth-card";
+import { usePhantom } from "../providers/phantom";
 
 export function WalletBalance() {
-  const { logout } = useAuth();
-  const { wallet, type } = useWallet();
+  const { wallet, getWalletBalance } = useCrossmint();
+  const { provider: phantomProvider } = usePhantom();
+  const [usdcBalance, setUsdcBalance] = useState<string>("0");
+  const [solBalance, setSolBalance] = useState<string>("0");
 
-  const { data } = useQuery({
-    queryKey: ["wallet-balance"],
-    queryFn: async () => {
-      if (!wallet || type !== "solana-smart-wallet") return [];
-      return (await wallet.balances(["sol", "usdc"])) || [];
-    },
-    enabled: wallet != null,
-  });
+  useEffect(() => {
+    if (!wallet || !phantomProvider) return;
+    getWalletBalance(wallet?.address, phantomProvider).then(
+      ({ usdc, sol, error }) => {
+        setUsdcBalance(usdc);
+        setSolBalance(sol);
+      }
+    );
+  }, [getWalletBalance, wallet?.address, phantomProvider]);
 
   const formatBalance = (balance: string, decimals: number) => {
     return (Number(balance) / Math.pow(10, decimals)).toFixed(2);
   };
 
-  const solBalance =
-    data?.find((t) => t.token === "sol")?.balances.total || "0";
-  const usdcBalance =
-    data?.find((t) => t.token === "usdc")?.balances.total || "0";
-
   return (
-    <Card>
+    <AuthenticatedCard>
       <CardHeader>
         <CardTitle>Wallet balance</CardTitle>
         <CardDescription className="flex items-center gap-2">
@@ -70,13 +66,6 @@ export function WalletBalance() {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
-        {wallet != null && (
-          <Button className="w-full" variant={"outline"} onClick={logout}>
-            {"Log out "}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+    </AuthenticatedCard>
   );
 }
